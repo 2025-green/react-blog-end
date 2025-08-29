@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import { Button, Card, Form } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ReplyItem from "../../components/ReplyItem";
+import { jwtDecode } from "jwt-decode";
 
 const Detail = (props) => {
   const { id } = useParams();
@@ -17,6 +19,42 @@ const Detail = (props) => {
     owner: false,
     replies: [],
   });
+
+  const [reply, setReply] = useState({
+    comment: "",
+    boardId: id,
+  });
+
+  const changeValue = (e) => {
+    setReply({ ...reply, comment: e.target.value });
+  };
+
+  async function submitReply(e) {
+    e.preventDefault();
+
+    let response = await axios({
+      method: "POST",
+      url: `http://localhost:8080/api/replies`,
+      data: reply,
+      headers: {
+        Authorization: jwt,
+      },
+    });
+
+    let responseBody = response.data.body;
+    // replyId, comment, boardId, userId
+
+    // id, comment, username, userId, owner
+    console.log("머지", responseBody);
+    board.replies = [responseBody, ...board.replies];
+    setBoard({ ...board });
+  }
+
+  function notifyDeleteReply(replyId) {
+    let newReplies = board.replies.filter((reply) => reply.id !== replyId);
+    board.replies = newReplies;
+    setBoard({ ...board });
+  }
 
   useEffect(() => {
     fetchDetail(id);
@@ -45,6 +83,7 @@ const Detail = (props) => {
     navigate("/");
   }
 
+  console.log(board);
   // update-form 갈때 상세보기의 상태 Board를 가져가는 것 연습해보기
   return (
     <div>
@@ -81,12 +120,12 @@ const Detail = (props) => {
                 as='textarea'
                 rows={3}
                 placeholder='댓글을 입력하세요...'
-                value={""}
-                onChange={""}
+                value={reply.comment}
+                onChange={changeValue}
               />
             </Form.Group>
             <div className='d-grid gap-2 d-md-flex justify-content-md-end'>
-              <Button variant='primary' type='submit'>
+              <Button variant='primary' type='submit' onClick={submitReply}>
                 댓글 작성
               </Button>
             </div>
@@ -96,21 +135,9 @@ const Detail = (props) => {
 
       {/* 댓글 목록 */}
       <div className='comment-list'>
-        <Card className='mb-3 shadow-sm border-0'>
-          <Card.Body>
-            <div className='d-flex justify-content-between'>
-              <div>
-                <div className='d-flex align-items-center mb-2'>
-                  <div className='flex-grow-1'>
-                    <h6 className='mb-0 fw-bold'>{"ssar"}</h6>
-                  </div>
-                </div>
-                <p className='mb-2'>{"댓글 내용"}</p>
-              </div>
-              <Button variant='danger'>삭제</Button>
-            </div>
-          </Card.Body>
-        </Card>
+        {board.replies.map((reply) => (
+          <ReplyItem reply={reply} notifyDeleteReply={notifyDeleteReply} />
+        ))}
       </div>
     </div>
   );
